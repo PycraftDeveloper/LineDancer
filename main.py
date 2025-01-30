@@ -6,13 +6,11 @@ import pmma
 
 pmma.init()
 
-challenge_noise = pmma.Perlin()
-
 # Load audio file
-filename = "Thomas Jebson - Pycraft (original) - Forest Theme.ogg"
+filename = "Austin John's Park Bench V2.mp3"
 data, samplerate = sf.read(filename)
 data = data.mean(axis=1) if data.ndim > 1 else data  # Convert to mono if stereo
-max_amplitude = np.max(np.abs(data))  # Find maximum amplitude for normalization
+max_amplitude = np.max(np.abs(data)) ** 2 # Find maximum amplitude for normalization
 
 # Pygame setup
 pygame.init()
@@ -52,9 +50,10 @@ def audio_callback(outdata, frames, time, status):
 
     # Normalize volume
     volume = np.max(np.abs(chunk)) / max_amplitude if len(chunk) > 0 else 0
+    volume = volume ** 2
 
     # Fill the output buffer with the audio data
-    outdata[:] = np.expand_dims(chunk, axis=1) * 0.1
+    outdata[:] = np.expand_dims(chunk, axis=1)
 
     # Update playback position
     playback_position += frames
@@ -71,9 +70,12 @@ running = True
 t = 0
 while running:
     # Update volume buffer
-    for _ in range(7):
+    v = volume
+    prev_vol = (volume_buffer[-1] * 0.6 + v) / 2
+    n = 7
+    for _ in range(n):
         volume_buffer.pop(0)
-        volume_buffer.append(volume)
+        volume_buffer.append(prev_vol * (1 - (1/n)) + v * (1/n))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -113,8 +115,8 @@ while running:
     top_points = [(0, 0)]
     bottom_points = [(0, window_height)]
     for x, v in enumerate(volume_buffer):
-        top_mag = v * ((window_height - 50) / 2)
-        bottom_mag = v * ((window_height - 50) / 2)
+        top_mag = v * ((window_height - 25) / 2)
+        bottom_mag = v * ((window_height - 25) / 2)
         top_points.append((x, top_mag))
         bottom_points.append((x, window_height - (bottom_mag)))
     t += 1
